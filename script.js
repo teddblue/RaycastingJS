@@ -1,5 +1,12 @@
-var windW = 640 //width of game in windowed mode
-var windH = 480 //height of game in windowed mode
+/*
+teddblue's RaycastingJS
+i got help from these sources:
+raycasting: https://lodev.org/cgtutor/raycasting.html
+rgb to hsl: https://gist.github.com/mjackson/5311256
+*/
+
+var windW = 320 //width of game in windowed mode
+var windH = 240 //height of game in windowed mode
 var gameW = windW;
 var gameH = windH;
 const div = document.getElementById("NicksGame");
@@ -7,39 +14,45 @@ const canvas = document.createElement("canvas");
 canvas.width = gameW;
 canvas.height = gameH;
 canvas.style = "image-rendering: pixelated; image-rendering: crisp-edges"
-const pen = canvas.getContext("2d");
-pen.fillRect(0, 0, gameW, gameH);
+const ctx = canvas.getContext("2d");
+ctx.fillRect(0, 0, gameW, gameH);
 div.appendChild(canvas);
+const assets = document.createElement("div")
+assets.style = "display: none; position: absolute"
+div.appendChild(assets);
 const menu = document.createElement("div");
 menu.innerHTML += '<input type="text", id="modelImport", name="modelImport">';
 menu.innerHTML += '<input type="button", id="importButton", value="import", onClick="importModel()"/>'
 menu.innerHTML += '<button id="clear", onclick="clearSpace()">clear</button>'
 menu.innerHTML += '<button id="fulscreen", onclick="toggleFullscreen()">⛶</button>'//for collapse use "⮌"
 div.appendChild(menu);
+var RUN = true
 
-class HSL {
-	constructor(hue=0, saturation=100, lightness=50){
+class HSLA {
+	constructor(hue=0, saturation=100, lightness=50, alpha=1){
 		this.h = hue;
 		this.s = saturation;
 		this.l = lightness;
+		this.a = alpha
 	}
 	string = function(){
-		return ("hsl("+this.h+","+Math.floor(this.s)+"%,"+Math.floor(this.l)+"%)");
+		return ("hsla("+this.h+","+Math.floor(this.s)+"%,"+Math.floor(this.l)+"%,"+this.a+")");
 	}
 }
 
 //Map
 var level = {
 	title: "starter world",
-	palette: [
-		new HSL(240), 
-		new HSL(120), 
-		new HSL(275), 
-		new HSL(), 
-		new HSL(60)
+	texSize: 1,
+	tiles: [
+		new HSLA(240), 
+		new HSLA(120), 
+		new HSLA(275), 
+		new HSLA(), 
+		new HSLA(60)
 		],
 	gridW: 24,
-	tiles: [
+	grid: [
 		0,0,0,1,1,1,1,1,1,1,1,0,1,0,1,0,1,1,1,1,1,1,1,1,
 		0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
 		1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
@@ -70,8 +83,8 @@ function getTile(x, y){
 	idx = Math.floor(x) + (Math.floor(y) * level.gridW)
 	data = {
 		idx: idx,
-		type: level.tiles[idx],
-		color: level.palette[level.tiles[idx]]
+		type: level.grid[idx],
+		color: level.tiles[level.grid[idx]]
 	}
 	return data
 }
@@ -90,10 +103,10 @@ var Cam = {
 
 //Drawing
 function drawBkg(){
-	pen.fillStyle = "hsl(60,30%,75%)"
-	pen.fillRect(0, 0, gameW, gameH/2)
-	pen.fillStyle = "hsl(0,90%,20%)"
-	pen.fillRect(0, gameH/2, gameW, gameH)
+	ctx.fillStyle = "hsl(60,30%,75%)"
+	ctx.fillRect(0, 0, gameW, gameH/2)
+	ctx.fillStyle = "hsl(0,90%,20%)"
+	ctx.fillRect(0, gameH/2, gameW, gameH)
 }
 function drawVertical(x, perpWallDist, side, tile){
 	// make code to draw line
@@ -104,13 +117,13 @@ function drawVertical(x, perpWallDist, side, tile){
 	var drawEnd = lineHeight/2 + h/2;
 	if(drawEnd >= h){drawEnd = h-1};
 	//console.log(tile)
-	var color = level.palette[tile-1]
-	color = new HSL(color.h, color.s, color.l)
+	var color = level.tiles[tile-1]
+	color = new HSLA(color.h, color.s, color.l)
 	//console.log(tile + " " + typeof color.string())
 	if(side == 1){color.l *= .75}
 	color = color.string()
-	pen.fillStyle = color;
-	pen.fillRect(x*Cam.res, drawStart*Cam.res, Cam.res, (drawEnd-drawStart)*Cam.res);
+	ctx.fillStyle = color;
+	ctx.fillRect(x*Cam.res, drawStart*Cam.res, Cam.res, (drawEnd-drawStart)*Cam.res);
 }
 
 //Raycast
@@ -158,7 +171,7 @@ function Raycast(){
 			}
 			tile = getTile(mapX, mapY).type
 			if(tile > 0){hit = 1;}
-			if((mapX<0 || mapX>level.gridW) || (mapY<0 || mapY>Math.floor(level.tiles.length/level.gridW))){
+			if((mapX<0 || mapX>level.gridW) || (mapY<0 || mapY>Math.floor(level.grid.length/level.gridW))){
 				hit = 1;
 				tile = 1;
 			}
@@ -171,9 +184,6 @@ function Raycast(){
 		drawVertical(x, perpWallDist, side, tile);
 	}
 }
-
-//loading files
-
 
 // Control
 var Keys = {}
@@ -210,7 +220,6 @@ function moveCamera(){
 		Cam.y += walk * Cam.dirY * walkSpeed
 	}
 }
-
 function toggleFullscreen(){
 	console.log("toggle full screen")
 	if(gameW==windW){
@@ -224,20 +233,80 @@ function toggleFullscreen(){
 		canvas.width = windW;
 		canvas.height = windH;
 	}
-	console.log("toggle full screen")
 }
+
+//loading files
+var data;
+function loadTextures(path){
+	if(data == null){return(null)}
+	RUN = false
+	path += "textures/"
+	var list = data.textures
+	for(let i=0; i<list.length; i++){
+		ctx.fillStyle = "hsla(0,50%,100%,1)"
+		ctx.fillRect(0,0,gameW,gameH)
+		var tex = document.createElement("img");
+		tex.src = path + list[i];
+		tex.id = "tex_" + i;
+		assets.appendChild(tex);
+		ctx.drawImage(tex, 0, 0);
+		sourceTex = ctx.getImageData(0, 0, data.texSize, data.texSize).data;
+		//console.log(sourceTex)
+		data.tiles.push([])
+		for(let j=0; j<(sourceTex.length); j+=4){
+			var r = sourceTex[j]/255;
+			var g = sourceTex[j+1]/255;
+			var b = sourceTex[j+2]/255;
+			var a = sourceTex[j+3]/255;
+			//convert to hsla
+			var max = Math.max(r,g,b), min = Math.min(r,g,b);
+			var h = (max-min)/2;
+			var s = (max-min)/2;
+			var l = (max-min)/2;
+			if(max==min){
+				h = s = 0;
+			}else{
+				var d = max - min;
+				s = l>.05? d/(2-max-min) : d/(max+min);
+				switch(max){
+					case r: h = (g-b)/d + (g>b? 6 : 0); break;
+					case g: h = (b-r)/d + 2; break;
+					case b: h = (r-g)/d + 4; break;
+				}
+				h /= 6;
+			}
+			h *= 360;
+			s *= 100;
+			l *= 100;
+			data.tiles[i].push(new HSLA(h, s, l, a));
+		}
+	}
+	RUN=true
+	console.log(data)
+}
+async function getLevelFile(path="./level/"){
+	const requestURL = path + "map.json"
+	const request = new Request(requestURL);
+	const response = await fetch(request);
+	data = await response.json()
+	//console.log(JSON.stringify(data))
+	loadTextures(path)
+}
+getLevelFile();
 
 //gameloop
 function MainLoop(timestamp) {
-	var progress = timestamp - lastRender;
-	checkControls();
-	moveCamera();
-	pen.fillStyle = "black";
-	pen.fillRect(0, 0, gameW, gameH);
-	drawBkg();
-	Raycast();
-	lastRender = timestamp;
-	window.requestAnimationFrame(MainLoop);
+	if(RUN){
+		var progress = timestamp - lastRender;
+		checkControls();
+		moveCamera();
+		ctx.fillStyle = "black";
+		ctx.fillRect(0, 0, gameW, gameH);
+		drawBkg();
+		Raycast();
+		lastRender = timestamp;
+		window.requestAnimationFrame(MainLoop);
+	}
 };
 var lastRender = 0;
 window.requestAnimationFrame(MainLoop);
