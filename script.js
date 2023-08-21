@@ -4,6 +4,7 @@ i got help from these sources:
 raycasting: https://lodev.org/cgtutor/raycasting.html
 rgb to hsl: https://gist.github.com/mjackson/5311256
 */
+var RUN = true
 
 var windW = 320 //width of game in windowed mode
 var windH = 240 //height of game in windowed mode
@@ -18,7 +19,7 @@ const ctx = canvas.getContext("2d");
 ctx.fillRect(0, 0, gameW, gameH);
 div.appendChild(canvas);
 const assets = document.createElement("div")
-assets.style = "display: none; position: absolute"
+//assets.style = "display: none; position: absolute"
 div.appendChild(assets);
 const menu = document.createElement("div");
 menu.innerHTML += '<input type="text", id="modelImport", name="modelImport">';
@@ -26,31 +27,30 @@ menu.innerHTML += '<input type="button", id="importButton", value="import", onCl
 menu.innerHTML += '<button id="clear", onclick="clearSpace()">clear</button>'
 menu.innerHTML += '<button id="fulscreen", onclick="toggleFullscreen()">⛶</button>'//for collapse use "⮌"
 div.appendChild(menu);
-var RUN = true
 
-class HSLA {
-	constructor(hue=0, saturation=100, lightness=50, alpha=1){
-		this.h = hue;
-		this.s = saturation;
-		this.l = lightness;
-		this.a = alpha
+class RGB {
+	constructor(red=0, green=0, blue=0){
+		this.r = red;
+		this.g = green;
+		this.b = blue;
 	}
 	string = function(){
-		return ("hsla("+this.h+","+Math.floor(this.s)+"%,"+Math.floor(this.l)+"%,"+this.a+")");
+		return ("rgb("+this.r+","+Math.floor(this.g)+","+Math.floor(this.b)+")");
 	}
 }
 
 //Map
 var level = {
 	title: "starter world",
-	texSize: 1,
+	texW: 16,
+	texH: 16,
 	tiles: [
-		new HSLA(240), 
-		new HSLA(120), 
-		new HSLA(275), 
-		new HSLA(), 
-		new HSLA(60)
-		],
+		[new RGB(0,100,255), new RGB(0,0,0)], 
+		[new RGB(0,255,0)], 
+		[new RGB(200,0,255)], 
+		[new RGB(255,0,0)], 
+		[new RGB(255,255,0)]
+	],
 	gridW: 24,
 	grid: [
 		0,0,0,1,1,1,1,1,1,1,1,0,1,0,1,0,1,1,1,1,1,1,1,1,
@@ -81,12 +81,11 @@ var level = {
 }
 function getTile(x, y){
 	idx = Math.floor(x) + (Math.floor(y) * level.gridW)
-	data = {
+	info = {
 		idx: idx,
 		type: level.grid[idx],
-		color: level.tiles[level.grid[idx]]
 	}
-	return data
+	return info
 }
 
 //Camera
@@ -98,7 +97,7 @@ var Cam = {
 	dirY: 0,
 	planeX: 0,
 	planeY: 0.66,
-	res: 2
+	res: 5
 }
 
 //Drawing
@@ -108,22 +107,40 @@ function drawBkg(){
 	ctx.fillStyle = "hsl(0,90%,20%)"
 	ctx.fillRect(0, gameH/2, gameW, gameH)
 }
-function drawVertical(x, perpWallDist, side, tile){
+function drawVertical(x, perpWallDist, side, tile, texX){
 	// make code to draw line
-	var h = Math.floor(gameH/Cam.res);
-	var lineHeight = Math.floor(h/perpWallDist);
-	var drawStart = h/2 - lineHeight/2;
-	if(drawStart<0){drawStart = 0};
-	var drawEnd = lineHeight/2 + h/2;
-	if(drawEnd >= h){drawEnd = h-1};
-	//console.log(tile)
-	var color = level.tiles[tile-1]
-	color = new HSLA(color.h, color.s, color.l)
-	//console.log(tile + " " + typeof color.string())
-	if(side == 1){color.l *= .75}
-	color = color.string()
-	ctx.fillStyle = color;
-	ctx.fillRect(x*Cam.res, drawStart*Cam.res, Cam.res, (drawEnd-drawStart)*Cam.res);
+	var h = (gameH/Cam.res);
+	var lineHeight = (h/perpWallDist);
+	var drawStart = (h/2 - lineHeight/2);
+	var drawEnd = (lineHeight/2 + h/2);
+	var drawSize = drawEnd-drawStart
+	// draw vertical in sections by color
+	var segSize = (drawSize/level.texH)
+	for(let i=0; i<level.texH; i++){
+		var segStart = (drawStart + segSize*i)
+		var segEnd = (segStart + segSize)
+		if(segStart<0){segStart=0}
+		if(segEnd>=h){segEnd = h-1}
+		if(segStart<=h && segEnd>=0){
+			var pixelIdx = (i * level.texW + texX)%(level.tiles[tile-1].length)
+			var color = level.tiles[tile-1][pixelIdx]
+			//console.log(color)
+			color = new RGB(color.r, color.g, color.b)
+			if(side == 1){
+				color.r *= .75
+				color.g *= .75
+				color.b *= .75
+			}
+			color = color.string()
+			ctx.fillStyle = color;
+			ctx.fillRect(
+				Math.floor(x*Cam.res), 
+				Math.floor(segStart*Cam.res), 
+				Math.floor(Cam.res), 
+				Math.ceil((segEnd-segStart)*Cam.res)
+			);
+		}
+	}
 }
 
 //Raycast
@@ -181,7 +198,21 @@ function Raycast(){
 		}else{
 			perpWallDist = (sideDistY - dDistY);
 		}
-		drawVertical(x, perpWallDist, side, tile);
+		var wallX;
+		if(side==0){
+			wallX = Cam.y + perpWallDist * rayDirY;
+		}else{
+			wallX = Cam.x + perpWallDist * rayDirX;
+		}
+		wallX -= Math.floor(wallX)
+		var texX = Math.floor(wallX * level.texW);
+		if(side==0 && rayDirX>0){
+			texX = level.texW - texX - 1;
+		}
+		if(side==1 && rayDirY<0){
+			texX = level.texW - texX - 1;
+		}
+		drawVertical(x, perpWallDist, side, tile, texX);
 	}
 }
 
@@ -204,7 +235,7 @@ function moveCamera(){
 	var turnSpeed = .05;
 	var walk = (Keys["w"] > 0) - (Keys["s"] > 0);
 	var turn = (Keys["a"] > 0) - (Keys["d"] > 0);
-	var strafe = (Keys["e"] > 0) - (Keys["q"] > 0);
+	var strafe = (Keys["q"] > 0) - (Keys["e"] > 0);
 	//rotate
 	var oDirX = Cam.dirX
 	Cam.dirX = Cam.dirX * Math.cos(turn * turnSpeed) - Cam.dirY * Math.sin(turn * turnSpeed);
@@ -219,9 +250,16 @@ function moveCamera(){
 	if(getTile(Cam.x, Cam.y + walk * Cam.dirY * walkSpeed).type<1){
 		Cam.y += walk * Cam.dirY * walkSpeed
 	}
+	var strafeDir = Math.atan2(Cam.dirY, Cam.dirX) + (Math.PI/2)
+	if(getTile(Cam.x + Math.cos(strafeDir) * strafe * walkSpeed, Cam.y).type<1){
+		Cam.x += Math.cos(strafeDir) * strafe * walkSpeed
+	}
+	if(getTile(Cam.x, Cam.y + Math.sin(strafeDir) * strafe * walkSpeed).type<1){
+		Cam.y += Math.sin(strafeDir) * strafe * walkSpeed
+	}
 }
 function toggleFullscreen(){
-	console.log("toggle full screen")
+	//console.log("toggle full screen")
 	if(gameW==windW){
 		gameW = window.innerHeight * 0.9 * (4/3);
 		gameH = window.innerHeight * 0.9;
@@ -237,62 +275,51 @@ function toggleFullscreen(){
 
 //loading files
 var data;
+var loaded = 0;
+function encodeTexture(){
+	ctx.drawImage(this, 0, 0);
+	sourceTex = ctx.getImageData(0, 0, 16, 16);
+	for(let j=0; j<(sourceTex.data.length); j+=4){
+		var r = sourceTex.data[j];
+		var g = sourceTex.data[j+1];
+		var b = sourceTex.data[j+2];
+		data.tiles[this.texIdx].push(new RGB(r, g, b));
+	}
+	loaded += 1;
+	if(loaded == data.textures.length){
+		level = data
+		console.log("load finished")
+		console.log(data)
+		RUN = true
+	}
+}
 function loadTextures(path){
 	if(data == null){return(null)}
-	RUN = false
 	path += "textures/"
 	var list = data.textures
+	data.tiles = []
 	for(let i=0; i<list.length; i++){
-		ctx.fillStyle = "hsla(0,50%,100%,1)"
+		data.tiles.push([])
+	}
+	for(let i=0; i<list.length; i++){
+		ctx.fillStyle = "rgb(0,0,0)"
 		ctx.fillRect(0,0,gameW,gameH)
-		var tex = document.createElement("img");
+		var tex = new Image();
+		tex.onload = encodeTexture;
 		tex.src = path + list[i];
 		tex.id = "tex_" + i;
+		tex.texIdx = i
 		assets.appendChild(tex);
-		ctx.drawImage(tex, 0, 0);
-		sourceTex = ctx.getImageData(0, 0, data.texSize, data.texSize).data;
-		//console.log(sourceTex)
-		data.tiles.push([])
-		for(let j=0; j<(sourceTex.length); j+=4){
-			var r = sourceTex[j]/255;
-			var g = sourceTex[j+1]/255;
-			var b = sourceTex[j+2]/255;
-			var a = sourceTex[j+3]/255;
-			//convert to hsla
-			var max = Math.max(r,g,b), min = Math.min(r,g,b);
-			var h = (max-min)/2;
-			var s = (max-min)/2;
-			var l = (max-min)/2;
-			if(max==min){
-				h = s = 0;
-			}else{
-				var d = max - min;
-				s = l>.05? d/(2-max-min) : d/(max+min);
-				switch(max){
-					case r: h = (g-b)/d + (g>b? 6 : 0); break;
-					case g: h = (b-r)/d + 2; break;
-					case b: h = (r-g)/d + 4; break;
-				}
-				h /= 6;
-			}
-			h *= 360;
-			s *= 100;
-			l *= 100;
-			data.tiles[i].push(new HSLA(h, s, l, a));
-		}
 	}
-	RUN=true
-	console.log(data)
 }
 async function getLevelFile(path="./level/"){
+	//RUN = false
 	const requestURL = path + "map.json"
 	const request = new Request(requestURL);
 	const response = await fetch(request);
 	data = await response.json()
-	//console.log(JSON.stringify(data))
 	loadTextures(path)
 }
-getLevelFile();
 
 //gameloop
 function MainLoop(timestamp) {
@@ -308,6 +335,7 @@ function MainLoop(timestamp) {
 		window.requestAnimationFrame(MainLoop);
 	}
 };
+getLevelFile();
 var lastRender = 0;
 window.requestAnimationFrame(MainLoop);
 //Raycast()
