@@ -10,7 +10,6 @@ var windW = 320 //width of game in windowed mode
 var windH = 240 //height of game in windowed mode
 var gameW = windW;
 var gameH = windH;
-var isFullscreen = false;
 const div = document.getElementById("NicksGame");
 const canvas = document.createElement("canvas");
 canvas.width = gameW;
@@ -23,7 +22,7 @@ const assets = document.createElement("div")
 assets.style = "display: none; position: absolute"
 div.appendChild(assets);
 const menu = document.createElement("div");
-menu.innerHTML += '<button id="fullscreen", onclick="fullscreen()">⛶</button>'//for collapse use "⮌"
+menu.innerHTML += '<button id="fullscreen", onclick="toggleFullscreen()">⛶</button>'//for collapse use "⮌"
 menu.innerHTML += '<p id="debug" style="display:inline"> fps:0 </0>'
 div.appendChild(menu);
 
@@ -66,19 +65,41 @@ var level = {
 	texW: 2,
 	texH: 2,
 	tiles: [
-		{h:2,w:2,pixels:[new RGB(0,100,255), new RGB(0,0,0)]}, 
-		{h:1,w:1,pixels:[new RGB(0,255,0)]}, 
-		{h:1,w:1,pixels:[new RGB(200,0,255)]}, 
-		{h:1,w:1,pixels:[new RGB(255,0,0)]}, 
-		{h:1,w:1,pixels:[new RGB(255,255,0)]}
+		[new RGB(0,100,255), new RGB(0,0,0)], 
+		[new RGB(0,255,0)], 
+		[new RGB(200,0,255)], 
+		[new RGB(255,0,0)], 
+		[new RGB(255,255,0)]
 	],
 	floorTex: 0,
-	ceilTex: 0,
-	skybox: 0,
-	gridW: 0,
-	grid: [],
-	floor:[],
-	ceil:[]
+	ceilTex: 1,
+	gridW: 24,
+	grid: [
+		0,0,0,1,1,1,1,1,1,1,1,0,1,0,1,0,1,1,1,1,1,1,1,1,
+		0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
+		1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
+		1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
+		1,0,0,0,0,0,2,2,2,2,2,0,0,0,0,3,0,3,0,3,0,0,0,1,
+		1,0,0,0,0,0,2,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,
+		1,0,0,0,0,0,2,0,0,0,2,0,0,0,0,3,0,0,0,3,0,0,0,0,
+		1,0,0,0,0,0,2,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,
+		1,0,0,0,0,0,2,2,0,2,2,0,0,0,0,3,0,3,0,3,0,0,0,1,
+		1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
+		1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
+		1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
+		1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
+		1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
+		1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
+		1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
+		1,4,4,4,4,4,4,4,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
+		1,4,0,4,0,0,0,0,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
+		1,4,0,0,0,0,5,0,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
+		1,4,0,4,0,0,0,0,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
+		1,4,0,4,4,4,4,4,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
+		1,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
+		1,4,4,4,4,4,4,4,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
+		1,1,1,1,1,1,1,1,1,1,1,0,0,1,1,1,1,1,1,1,1,1,1,1
+	]
 }
 function getTile(x, y){
 	idx = Math.floor(x) + (Math.floor(y) * level.gridW)
@@ -104,13 +125,11 @@ var Cam = {
 	dirY: 0,
 	planeX: 0,
 	planeY: 0.66,
-	res: 2,
-	drawDist: 10,
-	fogDist: 5
+	res: 3,
+	drawDist: 10
 }
 var h = Math.ceil(gameH/Cam.res)
 var w = Math.ceil(gameW/Cam.res)
-var wallZ = [];
 
 //Drawing
 function drawBkg(){
@@ -119,87 +138,6 @@ function drawBkg(){
 	ctx.fillRect(0, 0, gameW, horizon)
 	ctx.fillStyle = "hsl(0,90%,20%)"
 	ctx.fillRect(0, horizon, gameW, gameH)
-	var dx = Math.floor(windW*Cam.d);
-	var dy = 0-(windH*Math.PI/2);
-	var dw = Math.floor(windW*2*Math.PI);
-	var dh = Math.floor(windH*2*Math.PI);
-	ctx.drawImage(document.getElementById("tex_"+level.skybox),dx,dy,dw,dh)
-	ctx.drawImage(document.getElementById("tex_"+level.skybox),dx-dw,dy,dw,dh)
-}
-function drawHorizontal(){
-	h = Math.ceil(gameH/Cam.res)
-	w = Math.ceil(gameW/Cam.res)
-	for(let y=0; y<h/2; y++){
-		var rayDirX0 = Cam.dirX-Cam.planeX;
-		var rayDirY0 = Cam.dirY-Cam.planeY;
-		var rayDirX1 = Cam.dirX+Cam.planeX;
-		var rayDirY1 = Cam.dirY+Cam.planeY;
-		
-		var p = y-h/2;
-		var posZ = Cam.z * h;
-		var rowDistance = posZ / p;
-
-		var floorStepX = rowDistance*(rayDirX1-rayDirX0)/w;
-		var floorStepY = rowDistance*(rayDirY1-rayDirY0)/w;
-		var floorX = (rowDistance*rayDirX0)-Cam.x;
-		var floorY = (rowDistance*rayDirY0)-Cam.y;
-
-		for(let x=0; x<w; x++){
-			var cellX = Math.floor(floorX);
-			var cellY = Math.floor(floorY);
-
-			var idx = cellX - (cellY * level.gridW)
-			if(idx<0 || idx>level.grid.length-1){
-				idx = -1
-			}
-
-			//draw floor
-			if(idx>-1){
-				if(level.floor[idx%level.floor.length]>0){
-					var texture = level.tiles[level.floor[idx%level.floor.length]]
-					//console.log(texture,idx)
-					var tx = Math.floor(texture.w*(floorX-cellX))%(texture.w-1);
-					var ty = Math.floor(texture.h*(floorY-cellY))%(texture.h-1);
-					var color = texture.pixels[tx+ty*texture.w]
-					color = new RGB(color.r, color.g, color.b)
-					if(color.string == "rgb(255,0,255)"){
-						//transparency
-					}else{
-						color = color.string()
-						ctx.fillStyle = color;
-						ctx.fillRect(
-							Math.floor(x*Cam.res), 
-							Math.floor((h-y)*Cam.res), 
-							Math.floor(Cam.res), 
-							Math.ceil(Cam.res)
-						);
-					}
-				}
-				//draw ceiling
-				if(level.floor[idx%level.ceil.length]>0){
-					texture = level.tiles[level.ceil[idx%level.ceil.length]]
-					tx = Math.floor(texture.w*(floorX-cellX))%(texture.w-1);
-					ty = Math.floor(texture.h*(floorY-cellY))%(texture.h-1);
-					color = texture.pixels[tx+ty*texture.w]
-					color = new RGB(color.r, color.g, color.b)
-					if(color.string == "rgb(255,0,255)"){
-						//transparency
-					}else{
-						color = color.string()
-						ctx.fillStyle = color;
-						ctx.fillRect(
-							Math.floor(x*Cam.res), 
-							Math.floor((y)*Cam.res), 
-							Math.floor(Cam.res), 
-							Math.ceil(Cam.res)
-						);
-					}
-				}
-			}
-			floorX+=floorStepX;
-			floorY+=floorStepY;
-		}
-	}
 }
 function drawVertical(x, perpWallDist, side, tile, texX){
 	// make code to draw line
@@ -207,7 +145,6 @@ function drawVertical(x, perpWallDist, side, tile, texX){
 		return null
 	}
 	tile -= 1
-	texture = level.tiles[level.blocks[tile].texture[0]]
 	var lineHeight = (h/perpWallDist);
 	var drawStart = (h*Cam.z - lineHeight/2);
 	var drawEnd = (lineHeight/2 + h*Cam.z);
@@ -220,8 +157,8 @@ function drawVertical(x, perpWallDist, side, tile, texX){
 		if(segStart<0){segStart=0}
 		if(segEnd>=h){segEnd=h}
 		if(segStart<=h && segEnd>=0){
-			var pixelIdx = (i*texture.w + texX)%(texture.pixels.length)
-			var color = texture.pixels[pixelIdx]
+			var pixelIdx = (i*level.tiles[tile].w + texX)%(level.tiles[tile].pixels.length)
+			var color = level.tiles[tile].pixels[pixelIdx]
 			color = new RGB(color.r, color.g, color.b)
 			if(color.string == "rgb(255,0,255)"){
 				//transparency
@@ -238,14 +175,17 @@ function drawVertical(x, perpWallDist, side, tile, texX){
 			}
 		}
 	}
+	//draw floor
+	for(let y=Math.floor(drawEnd+1); y<h; y++){
+		
+	}
 }
 
 //Raycast
 function Raycast(){
 	h = Math.ceil(gameH/Cam.res)
 	w = Math.ceil(gameW/Cam.res)
-	drawHorizontal();
-	wallZ = [];
+
 	for(let x = 0; x < w; x++){;
 		var camX = 2*x/w-1;
 		var rayDirX = Cam.dirX + Cam.planeX * camX;
@@ -318,13 +258,13 @@ function Raycast(){
 			texX = 0;
 		}
 		drawVertical(x, perpWallDist, side, tile, texX);
-		wallZ[x] = perpWallDist;
 	}
 }
 
 // Control
 var Keys = {}
-var Mouse = {x:0, y:0, z:0, b1:0, b2:0, b3:0}
+function checkControls() {
+}
 document.addEventListener('keydown', (event) => {
 	if (Keys[event.key]) {
 		Keys[event.key] += 1;
@@ -335,61 +275,60 @@ document.addEventListener('keydown', (event) => {
 document.addEventListener('keyup', (event) => {
 	Keys[event.key] = 0;
 }, false);
-document.addEventListener('mousemove', (event) => {
-	Mouse.x = event.movementX;
-	Mouse.y = event.movementY;
-}, false);
-
 function moveCamera(DTime){
 	var walkSpeed = .2;
-	var turnSpeed = .1;
-	var walk = (Keys["w"]>0 || Keys["ArrowUp"]>0) - (Keys["s"]>0 || Keys["ArrowDown"]>0);
-	var turn = (Keys["q"]>0 || Keys["ArrowLeft"]>0) - (Keys["q"]>0 || Keys["ArrowRight"] > 0);
-	if (false){turn=Mouse.x/-5}; //mouse controls when mouse lock works
-	var strafe = (Keys["a"] > 0) - (Keys["d"] > 0);
+	var turnSpeed = .05;
+	var walk = (Keys["w"] > 0) - (Keys["s"] > 0);
+	var turn = (Keys["a"] > 0) - (Keys["d"] > 0);
+	var strafe = (Keys["q"] > 0) - (Keys["e"] > 0);
 	//var fly = (Keys["f"] > 0) - (Keys["r"] > 0);
 	//rotate
-	Cam.d = (Cam.d+turn*turnSpeed)%(2*Math.PI);
-	if(Cam.d<0){Cam.d+=2*Math.PI};
-	var oDirX = Cam.dirX;
+	var oDirX = Cam.dirX
 	Cam.dirX = Cam.dirX * Math.cos(turn * turnSpeed) - Cam.dirY * Math.sin(turn * turnSpeed);
 	Cam.dirY = oDirX * Math.sin(turn * turnSpeed) + Cam.dirY * Math.cos(turn * turnSpeed);
-	var oPlaneX = Cam.planeX;
+	var oPlaneX = Cam.planeX
 	Cam.planeX = Cam.planeX * Math.cos(turn * turnSpeed) - Cam.planeY * Math.sin(turn * turnSpeed);
 	Cam.planeY = oPlaneX * Math.sin(turn * turnSpeed) + Cam.planeY * Math.cos(turn * turnSpeed);
 	//move with collisions
-	if(getTile(Cam.x + Cam.dirX*walk*.4 + walk*Cam.dirX*walkSpeed, Cam.y).type<1){
-		Cam.x += walk*Cam.dirX*walkSpeed;
-	};
-	if(getTile(Cam.x, Cam.y + Cam.dirY*walk*.4 + walk*Cam.dirY*walkSpeed).type<1){
-		Cam.y += walk*Cam.dirY*walkSpeed;
-	};
+	if(getTile(Cam.x + walk * Cam.dirX * walkSpeed, Cam.y).type<1){
+		Cam.x += walk * Cam.dirX * walkSpeed
+	}
+	if(getTile(Cam.x, Cam.y + walk * Cam.dirY * walkSpeed).type<1){
+		Cam.y += walk * Cam.dirY * walkSpeed
+	}
 	//strafe with collisions
-	var strafeDir = Math.atan2(Cam.dirY, Cam.dirX) + (Math.PI/2);
-	if(getTile(Cam.x + Math.cos(strafeDir)*strafe*.4 + Math.cos(strafeDir)*strafe*walkSpeed, Cam.y).type<1){
-		Cam.x += Math.cos(strafeDir)*strafe*walkSpeed;
-	};
-	if(getTile(Cam.x, Cam.y + Math.sin(strafeDir)*strafe*.4 + Math.sin(strafeDir)*strafe*walkSpeed).type<1){
-		Cam.y += Math.sin(strafeDir) * strafe * walkSpeed;
-	};
-
-	Mouse.x=0;
-	Mouse.y=0;
-}
-function fullscreen(){
-	if(canvas.webkitRequestFullScreen) {
-		canvas.webkitRequestFullScreen();
-	}else{
-		canvas.mozRequestFullScreen();
+	var strafeDir = Math.atan2(Cam.dirY, Cam.dirX) + (Math.PI/2)
+	if(getTile(Cam.x + Math.cos(strafeDir) * strafe * walkSpeed, Cam.y).type<1){
+		Cam.x += Math.cos(strafeDir) * strafe * walkSpeed
+	}
+	if(getTile(Cam.x, Cam.y + Math.sin(strafeDir) * strafe * walkSpeed).type<1){
+		Cam.y += Math.sin(strafeDir) * strafe * walkSpeed
 	}
 }
-document.addEventListener("fullscreenchange", (event) => {
-	if(document.fullscreenElement){
-		isFullscreen=true
+function toggleFullscreen(){
+	h = Math.ceil(gameH/Cam.res)
+	w = Math.ceil(gameW/Cam.res)
+	console.log("h: " + h + ", w: " + w)
+	var btn = document.getElementById("fullscreen")
+	if(gameW==windW){
+		gameW = window.innerHeight * 0.9 * (4/3);
+		gameH = window.innerHeight * 0.9;
+		canvas.width = window.innerHeight * 0.9 * (4/3);
+		canvas.height = window.innerHeight * 0.9;
+		btn.innerHTML = "X"
 	}else{
-		isFullscreen=false
+		gameW = windW;
+		gameH = windH;
+		canvas.width = windW;
+		canvas.height = windH;
+		btn.innerHTML = "⛶"
 	}
-}, false);
+	Cam.res = Math.round(gameW/w)
+	console.log(Cam.res)
+	h = Math.ceil(gameH/Cam.res)
+	w = Math.ceil(gameW/Cam.res)
+	console.log("h: " + h + ", w: " + w)
+}
 
 //loading files
 var data;
@@ -444,23 +383,7 @@ async function getLevelFile(path="./level/"){
 	const request = new Request(requestURL);
 	const response = await fetch(request);
 	data = await response.json()
-	if(data == null){return(null)}
-	path += "textures/"
-	var list = data.textures
-	data.tiles = []
-	for(let i=0; i<list.length; i++){
-		data.tiles.push({})
-	}
-	for(let i=0; i<list.length; i++){
-		ctx.fillStyle = "rgb(0,0,0)"
-		ctx.fillRect(0,0,gameW,gameH)
-		var tex = new Image();
-		tex.onload = encodeTexture;
-		tex.src = path + list[i];
-		tex.id = "tex_" + i;
-		tex.texIdx = i
-		assets.appendChild(tex);
-	}
+	loadTextures(path)
 }
 
 //gameloop
@@ -473,7 +396,7 @@ function refreshDebug(DTime){
 	bigD += DTime;
 	if(frame % 8 == 0){
 		var fps = Math.round((1000/(bigD/8))*10)/10
-		debug.innerHTML = " fps:"+fps+", res:"+Cam.res;
+		debug.innerHTML = " fps:" + fps + ", res:" + Cam.res
 		bigD = 0;
 		
 	}
@@ -481,6 +404,7 @@ function refreshDebug(DTime){
 function MainLoop(timestamp) {
 	if(RUN){
 		var DTime = timestamp - lastRender;
+		checkControls();
 		moveCamera(DTime);
 		ctx.fillStyle = "black";
 		ctx.fillRect(0, 0, gameW, gameH);
@@ -494,6 +418,7 @@ function MainLoop(timestamp) {
 		window.requestAnimationFrame(MainLoop);
 	}
 };
-getLevelFile().then(MainLoop);
+getLevelFile();
+window.requestAnimationFrame(MainLoop);
 //drawHorizontal()
 //Raycast()
