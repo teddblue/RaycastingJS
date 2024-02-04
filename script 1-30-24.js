@@ -38,66 +38,58 @@ class RGB {
 	}
 }
 function addRGB(color, r, g, b) {
-	color[0] += r;
-	if (color[0] > 255) { color[0] -= 256 };
-	if (color[0] < 0) { color[0] = 0 };
-	color[1] += g;
-	if (color[1] > 255) { color[1] -= 256 };
-	if (color[1] < 0) { color[1] = 0 };
-	color[2] += b;
-	if (color[2] > 255) { color[2] -= 256 };
-	if (color[2] < 0) { color[2] = 0 };
+	color.r += r;
+	if (color.r > 255) { color.r -= 256 };
+	if (color.r < 0) { color.r = 0 };
+	color.g += g;
+	if (color.g > 255) { color.g -= 256 };
+	if (color.g < 0) { color.g = 0 };
+	color.b += b;
+	if (color.b > 255) { color.b -= 256 };
+	if (color.b < 0) { color.b = 0 };
 	return color
 }
 function multRGB(color, r, g, b) {
-	color[0] *= r;
-	if (color[0] > 255) { color[0] = 255 };
-	if (color[0] < 0) { color[0] = 0 };
-	color[1] *= g;
-	if (color[1] > 255) { color[1] = 255 };
-	if (color[1] < 0) { color[1] = 0 };
-	color[2] *= b;
-	if (color[2] > 255) { color[2] = 255 };
-	if (color[2] < 0) { color[2] = 0 };
+	color.r *= r;
+	if (color.r > 255) { color.r = 255 };
+	if (color.r < 0) { color.r = 0 };
+	color.g *= g;
+	if (color.g > 255) { color.g = 255 };
+	if (color.g < 0) { color.g = 0 };
+	color.b *= b;
+	if (color.b > 255) { color.b = 255 };
+	if (color.b < 0) { color.b = 0 };
 	return color
 }
 function stringRGB(color) {
-	return ("rgb(" + color[0] + "," + color[1] + "," + color[2] + ")");
+	return ("rgb(" + color.r + "," + color.g + "," + color.b + ")");
 }
 
 //Map
-MapIdx = 0;
 var level = {
 	title: "starter world",
 	texW: 2,
 	texH: 2,
 	tiles: [
-		{ h: 2, w: 2, pixels: [[0, 100, 255], [0, 0, 0]] },
-		{ h: 1, w: 1, pixels: [[0, 255, 0]] },
-		{ h: 1, w: 1, pixels: [[200, 0, 255]] },
-		{ h: 1, w: 1, pixels: [[255, 0, 0]] },
-		{ h: 1, w: 1, pixels: [[255, 255, 0]] }
+		{ h: 2, w: 2, pixels: [new RGB(0, 100, 255), new RGB(0, 0, 0)] },
+		{ h: 1, w: 1, pixels: [new RGB(0, 255, 0)] },
+		{ h: 1, w: 1, pixels: [new RGB(200, 0, 255)] },
+		{ h: 1, w: 1, pixels: [new RGB(255, 0, 0)] },
+		{ h: 1, w: 1, pixels: [new RGB(255, 255, 0)] }
 	],
-	map: [
-		{
-			floorTex: 0,
-			ceilTex: 0,
-			skybox: 0,
-			gridW: 0,
-			grid: [],
-			floor: [],
-			ceil: [],
-			object: [
-				{ x: 10, y: 5, z: 0, d: 2, tile: 0 }
-			]
-		}
-	]
+	floorTex: 0,
+	ceilTex: 0,
+	skybox: 0,
+	gridW: 0,
+	grid: [],
+	floor: [],
+	ceil: [],
+	object: [{ x: 5, y: 5, z: 0, dist: 0, tile: 0 }, { x: 5, y: 10, z: 0, dist: 1, tile: 0 }, { x: 10, y: 5, z: 0, d: 2, tile: 0 }]
 }
-var Map = level.map[MapIdx];
 function getTile(x, y) {
-	var idx = Math.floor(x) + (Math.floor(y) * Map.gridW)
-	var type = Map.grid[idx]
-	if (x < 0 || x > Map.gridW || y < 0 || y > Map.grid.length / Map.gridW) {
+	var idx = Math.floor(x) + (Math.floor(y) * level.gridW)
+	var type = level.grid[idx]
+	if (x < 0 || x > level.gridW || y < 0 || y > level.grid.length / level.gridW) {
 		idx = -1;
 		type = 1;
 	}
@@ -120,7 +112,7 @@ var Cam = {
 	planeY: 0.66,
 	res: 2,
 	drawDist: 10,
-	fog: {
+	fog:{
 		min: 5,
 		max: 10
 	}
@@ -128,21 +120,21 @@ var Cam = {
 var h = Math.ceil(gameH / Cam.res)
 var w = Math.ceil(gameW / Cam.res)
 var ZBuffer = [];
-function fogRGB(color, distance) {
+function fogRGB(color, distance){
 	distance = Math.abs(distance)
-	if (Map.fog) {
-		var fogColor = Map.fog.color
+	if(level.fog){
+		var fogColor = level.fog.color
 		//fogColor = new RGB(fogColor.r, fogColor.g, fogColor.b)
-		if (distance > Map.fog.max) {
-			color[0] = fogColor[0];
-			color[1] = fogColor[1];
-			color[2] = fogColor[2];
-		} else if (distance > Map.fog.min) {
-			var m = (distance - Cam.fog.min) / (Cam.fog.max - Cam.fog.min);
+		if(distance>level.fog.max){
+			color.r = fogColor.r;
+			color.g = fogColor.g;
+			color.b = fogColor.b;
+		}else if(distance>level.fog.min){
+			var m = (distance - Cam.fog.min)/(Cam.fog.max-Cam.fog.min);
 			m = Math.min(Math.max(m, 0), 1);
-			color[0] = (color[0] * (1 - m)) + (fogColor[0] * m);
-			color[1] = (color[1] * (1 - m)) + (fogColor[1] * m);
-			color[2] = (color[2] * (1 - m)) + (fogColor[2] * m);
+			color.r = (color.r * (1-m))+(fogColor.r*m);
+			color.g = (color.g * (1-m))+(fogColor.g*m);
+			color.b = (color.b * (1-m))+(fogColor.b*m);
 		}
 	}
 	return color
@@ -156,8 +148,8 @@ function drawBkg() {
 	var dy = 0 - (windH * Math.PI / 2);
 	var dw = Math.floor(windW * 2 * Math.PI);
 	var dh = Math.floor(windH * 2 * Math.PI);
-	ctx.drawImage(document.getElementById("tex_" + Map.skybox), dx, dy, dw, dh)
-	ctx.drawImage(document.getElementById("tex_" + Map.skybox), dx - dw, dy, dw, dh)
+	ctx.drawImage(document.getElementById("tex_" + level.skybox), dx, dy, dw, dh)
+	ctx.drawImage(document.getElementById("tex_" + level.skybox), dx - dw, dy, dw, dh)
 }
 function drawHorizontal() {
 	h = Math.ceil(gameH / Cam.res)
@@ -181,19 +173,19 @@ function drawHorizontal() {
 			var cellX = Math.floor(floorX);
 			var cellY = Math.floor(floorY);
 
-			var idx = cellX - (cellY * Map.gridW)
-			if (idx < 0 || idx > Map.grid.length || cellX >= 0 || cellX < 0 - Map.gridW) {
+			var idx = cellX - (cellY * level.gridW)
+			if (idx < 0 || idx > level.grid.length || cellX >= 0 || cellX < 0 - level.gridW) {
 				idx = -1
 			}
 
 			//draw floor
 			if (idx > -1) {
-				if (Map.floor[idx % Map.floor.length] > 0) {
-					var texture = level.tiles[Map.floor[idx % Map.floor.length]]
+				if (level.floor[idx % level.floor.length] > 0) {
+					var texture = level.tiles[level.floor[idx % level.floor.length]]
 					var tx = Math.floor(texture.w * (floorX - cellX)) % (texture.w - 1);
 					var ty = Math.floor(texture.h * (floorY - cellY)) % (texture.h - 1);
 					var color = texture.pixels[tx + ty * texture.w]
-					color = [color[0], color[1], color[2]]
+					color = new RGB(color.r, color.g, color.b)
 					color = fogRGB(color, rowDistance)
 					if (stringRGB(color) == "rgb(255,0,255)") {
 						//transparency
@@ -209,12 +201,12 @@ function drawHorizontal() {
 					}
 				}
 				//draw ceiling
-				if (Map.floor[idx % Map.ceil.length] > 0) {
-					texture = level.tiles[Map.ceil[idx % Map.ceil.length]]
+				if (level.floor[idx % level.ceil.length] > 0) {
+					texture = level.tiles[level.ceil[idx % level.ceil.length]]
 					tx = Math.floor(texture.w * (floorX - cellX)) % (texture.w - 1);
 					ty = Math.floor(texture.h * (floorY - cellY)) % (texture.h - 1);
 					color = texture.pixels[tx + ty * texture.w]
-					color = [color[0], color[1], color[2]]
+					color = new RGB(color.r, color.g, color.b)
 					color = fogRGB(color, rowDistance)
 					if (stringRGB(color) == "rgb(255,0,255)") {
 						//transparency
@@ -257,7 +249,7 @@ function drawVertical(x, perpWallDist, side, tile, texX) {
 			var pixelIdx = Math.abs(i * texture.w + texX) % (texture.pixels.length)
 
 			var color = texture.pixels[pixelIdx]
-			color = [color[0], color[1], color[2]]
+			color = new RGB(color.r, color.g, color.b)
 			if (stringRGB(color) == "rgb(255,0,255)") {
 				//transparency
 			} else {
@@ -277,20 +269,18 @@ function drawVertical(x, perpWallDist, side, tile, texX) {
 }
 function drawObjects() {
 	//calculate and sort by distance from cam per object
-	for (let i = 0; i < Map.object.length; i++) {
-		var obj = Map.object[i]
-		Map.object[i].dist = ((Cam.x - obj.x) ** 2) + ((Cam.y - obj.y) ** 2);
+	for (let i = 0; i < level.object.length; i++) {
+		var obj = level.object[i]
+		level.object[i].dist = ((Cam.x - obj.x) ** 2) + ((Cam.y - obj.y) ** 2);
 	}
-	Map.object.sort(function(a, b) { return a.dist - b.dist })
+	level.object.sort(function(a, b) { return a.dist - b.dist })
 
-	for (let i = 0; i < Map.object.length; i++) {
-		var obj = Map.object[i]
+	for (let i = 0; i < level.object.length; i++) {
 		if (obj.tile > 0) {
 			//fixing object flicker, hapens within this if, the if works as intended
-			var obj = Map.object[i];
+			var obj = level.object[i];
 			var spriteX = obj.x - Cam.x;
 			var spriteY = obj.y - Cam.y;
-			var spriteD = (obj.d - Cam.d) % (Math.PI * 2)
 
 			var invDet = 1 / (Cam.planeX * Cam.dirY - Cam.dirX * Cam.planeY);
 			var transformX = invDet * (Cam.dirY * spriteX - Cam.dirX * spriteY);
@@ -309,26 +299,11 @@ function drawObjects() {
 			var drawEndX = Math.floor(spriteW / 2 + spriteScreenX);
 			if (drawEndX > w) { drawEndX = w };
 
-			var tile = obj.tile
-			var texture = level.tiles[tile - 1]
-			var sprite = false
-			var tW = texture.w
-			var tH = texture.h
-			if (level.sprite) {
-				sprite = level.sprite[obj.tile - 1]
-				tile = sprite.tex
-				texture = level.tiles[tile - 1]
-				tW = sprite.w
-				tH = sprite.h
-			}
-
+			var texture = level.tiles[obj.tile - 1]
 			for (let stripe = drawStartX; stripe <= drawEndX; stripe++) {
 				if (transformY > 0 & stripe > 0 & stripe < w & transformY < ZBuffer[stripe]) {
-					// use a value for direction based on dir and number of direction frames
-					var dirs = (sprite["dirs"])? sprite["dirs"] : 1;
-					var dir = Math.round((dirs-1)*((spriteD-Math.PI/dirs)%6.282)/6.282)
-					var texX = Math.floor(tW * (stripe - originX) / spriteW) + (dir) * tW;
-					drawVertical(stripe, transformY, 0, tile, texX)
+					var texX = Math.floor(texture.w * (stripe - originX) / spriteW);
+					drawVertical(stripe, transformY, 0, obj.tile, texX)
 				}
 			}
 		}
@@ -384,7 +359,7 @@ function Raycast() {
 			}
 			tile = getTile(mapX, mapY).type
 			if (tile > 0) { hit = 1; }
-			if ((mapX < 0 || mapX >= Map.gridW) || (mapY < 0 || mapY > Math.floor(Map.grid.length / Map.gridW))) {
+			if ((mapX < 0 || mapX >= level.gridW) || (mapY < 0 || mapY > Math.floor(level.grid.length / level.gridW))) {
 				hit = 1;
 				tile = 0;
 			}
@@ -441,10 +416,6 @@ document.addEventListener('mousemove', (event) => {
 function moveCamera(DTime) {
 	var walkSpeed = .2;
 	var turnSpeed = .1;
-	if (Keys[" "] > 50) {
-		MapIdx = (MapIdx + 1) % level.map.length
-		Keys[" "] = 0
-	}
 	var walk = (Keys["w"] > 0 || Keys["ArrowUp"] > 0) - (Keys["s"] > 0 || Keys["ArrowDown"] > 0);
 	var turn = (Keys["q"] > 0 || Keys["ArrowLeft"] > 0) - (Keys["e"] > 0 || Keys["ArrowRight"] > 0);
 	if (document.pointerLockElement == canvas) { turn = Mouse.x / -20 }; //mouse controls
@@ -499,18 +470,6 @@ canvas.addEventListener("click", async () => {
 //loading files
 var data;
 var loaded = 0;
-function progBar(x, max){
-	out="["
-	for(let i=1; i<max; i++){
-		if(i<x){
-			out+="="
-		}else{
-			out+="-"
-		}
-	}
-	out+="]"
-	return out
-}
 function encodeTexture() {
 	var img = {
 		h: 16,
@@ -525,11 +484,10 @@ function encodeTexture() {
 		var r = sourceTex.data[j];
 		var g = sourceTex.data[j + 1];
 		var b = sourceTex.data[j + 2];
-		img.pixels.push([r, g, b]);
+		img.pixels.push(new RGB(r, g, b));
 	}
 	data.tiles[this.texIdx] = img;
 	loaded += 1;
-	//console.log("\rloading textures: "+progBar(loaded,data.textures.length))
 	if (loaded == data.textures.length) {
 		level = data
 		console.log("load finished")
@@ -537,20 +495,11 @@ function encodeTexture() {
 		RUN = true
 	}
 }
-async function getLevelFile(path = "./level/") {
-	//RUN = false
-	console.log("fetching level data")
-	const requestURL = path + "level.json"
-	const request = new Request(requestURL);
-	const response = await fetch(request);
-	data = await response.json()
+function loadTextures(path) {
 	if (data == null) { return (null) }
-
 	path += "textures/"
 	var list = data.textures
 	data.tiles = []
-	console.log("loading textures: "+progBar(0,list.length))
-	loaded = 0
 	for (let i = 0; i < list.length; i++) {
 		data.tiles.push({})
 	}
@@ -561,7 +510,31 @@ async function getLevelFile(path = "./level/") {
 		tex.onload = encodeTexture;
 		tex.src = path + list[i];
 		tex.id = "tex_" + i;
-		tex.texIdx = i;
+		tex.texIdx = i
+		assets.appendChild(tex);
+	}
+}
+async function getLevelFile(path = "./level/") {
+	//RUN = false
+	const requestURL = path + "map.json"
+	const request = new Request(requestURL);
+	const response = await fetch(request);
+	data = await response.json()
+	if (data == null) { return (null) }
+	path += "textures/"
+	var list = data.textures
+	data.tiles = []
+	for (let i = 0; i < list.length; i++) {
+		data.tiles.push({})
+	}
+	for (let i = 0; i < list.length; i++) {
+		ctx.fillStyle = "rgb(0,0,0)"
+		ctx.fillRect(0, 0, gameW, gameH)
+		var tex = new Image();
+		tex.onload = encodeTexture;
+		tex.src = path + list[i];
+		tex.id = "tex_" + i;
+		tex.texIdx = i
 		assets.appendChild(tex);
 	}
 }
@@ -576,7 +549,7 @@ function refreshDebug(DTime) {
 	bigD += DTime;
 	if (frame % 8 == 0) {
 		var fps = Math.round((1000 / (bigD / 8)) * 10) / 10
-		debug.innerHTML = " fps:" + fps + ", res:" + Cam.res + ", dir:" + Cam.d;
+		debug.innerHTML = " fps:" + fps + ", res:" + Cam.res;
 		bigD = 0;
 
 	}
@@ -584,7 +557,6 @@ function refreshDebug(DTime) {
 function MainLoop(timestamp) {
 	if (RUN) {
 		var DTime = timestamp - lastRender;
-		Map = level.map[MapIdx];
 		moveCamera(DTime);
 		ctx.fillStyle = "black";
 		ctx.fillRect(0, 0, gameW, gameH);
@@ -592,7 +564,7 @@ function MainLoop(timestamp) {
 		Raycast();
 		refreshDebug(DTime);
 		if (fps > 30 && Cam.res > 1) { Cam.res -= 1 };
-		if (fps < 24) { Cam.res += 1 };
+		if (fps < 24) { Cam.res += 1 }
 		frame += 1;
 		lastRender = timestamp;
 		window.requestAnimationFrame(MainLoop);

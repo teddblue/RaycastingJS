@@ -38,31 +38,31 @@ class RGB {
 	}
 }
 function addRGB(color, r, g, b) {
-	color[0] += r;
-	if (color[0] > 255) { color[0] -= 256 };
-	if (color[0] < 0) { color[0] = 0 };
-	color[1] += g;
-	if (color[1] > 255) { color[1] -= 256 };
-	if (color[1] < 0) { color[1] = 0 };
-	color[2] += b;
-	if (color[2] > 255) { color[2] -= 256 };
-	if (color[2] < 0) { color[2] = 0 };
+	color.r += r;
+	if (color.r > 255) { color.r -= 256 };
+	if (color.r < 0) { color.r = 0 };
+	color.g += g;
+	if (color.g > 255) { color.g -= 256 };
+	if (color.g < 0) { color.g = 0 };
+	color.b += b;
+	if (color.b > 255) { color.b -= 256 };
+	if (color.b < 0) { color.b = 0 };
 	return color
 }
 function multRGB(color, r, g, b) {
-	color[0] *= r;
-	if (color[0] > 255) { color[0] = 255 };
-	if (color[0] < 0) { color[0] = 0 };
-	color[1] *= g;
-	if (color[1] > 255) { color[1] = 255 };
-	if (color[1] < 0) { color[1] = 0 };
-	color[2] *= b;
-	if (color[2] > 255) { color[2] = 255 };
-	if (color[2] < 0) { color[2] = 0 };
+	color.r *= r;
+	if (color.r > 255) { color.r = 255 };
+	if (color.r < 0) { color.r = 0 };
+	color.g *= g;
+	if (color.g > 255) { color.g = 255 };
+	if (color.g < 0) { color.g = 0 };
+	color.b *= b;
+	if (color.b > 255) { color.b = 255 };
+	if (color.b < 0) { color.b = 0 };
 	return color
 }
 function stringRGB(color) {
-	return ("rgb(" + color[0] + "," + color[1] + "," + color[2] + ")");
+	return ("rgb(" + color.r + "," + color.g + "," + color.b + ")");
 }
 
 //Map
@@ -72,11 +72,11 @@ var level = {
 	texW: 2,
 	texH: 2,
 	tiles: [
-		{ h: 2, w: 2, pixels: [[0, 100, 255], [0, 0, 0]] },
-		{ h: 1, w: 1, pixels: [[0, 255, 0]] },
-		{ h: 1, w: 1, pixels: [[200, 0, 255]] },
-		{ h: 1, w: 1, pixels: [[255, 0, 0]] },
-		{ h: 1, w: 1, pixels: [[255, 255, 0]] }
+		{ h: 2, w: 2, pixels: [new RGB(0, 100, 255), new RGB(0, 0, 0)] },
+		{ h: 1, w: 1, pixels: [new RGB(0, 255, 0)] },
+		{ h: 1, w: 1, pixels: [new RGB(200, 0, 255)] },
+		{ h: 1, w: 1, pixels: [new RGB(255, 0, 0)] },
+		{ h: 1, w: 1, pixels: [new RGB(255, 255, 0)] }
 	],
 	map: [
 		{
@@ -134,15 +134,15 @@ function fogRGB(color, distance) {
 		var fogColor = Map.fog.color
 		//fogColor = new RGB(fogColor.r, fogColor.g, fogColor.b)
 		if (distance > Map.fog.max) {
-			color[0] = fogColor[0];
-			color[1] = fogColor[1];
-			color[2] = fogColor[2];
+			color.r = fogColor.r;
+			color.g = fogColor.g;
+			color.b = fogColor.b;
 		} else if (distance > Map.fog.min) {
 			var m = (distance - Cam.fog.min) / (Cam.fog.max - Cam.fog.min);
 			m = Math.min(Math.max(m, 0), 1);
-			color[0] = (color[0] * (1 - m)) + (fogColor[0] * m);
-			color[1] = (color[1] * (1 - m)) + (fogColor[1] * m);
-			color[2] = (color[2] * (1 - m)) + (fogColor[2] * m);
+			color.r = (color.r * (1 - m)) + (fogColor.r * m);
+			color.g = (color.g * (1 - m)) + (fogColor.g * m);
+			color.b = (color.b * (1 - m)) + (fogColor.b * m);
 		}
 	}
 	return color
@@ -193,7 +193,7 @@ function drawHorizontal() {
 					var tx = Math.floor(texture.w * (floorX - cellX)) % (texture.w - 1);
 					var ty = Math.floor(texture.h * (floorY - cellY)) % (texture.h - 1);
 					var color = texture.pixels[tx + ty * texture.w]
-					color = [color[0], color[1], color[2]]
+					color = new RGB(color.r, color.g, color.b)
 					color = fogRGB(color, rowDistance)
 					if (stringRGB(color) == "rgb(255,0,255)") {
 						//transparency
@@ -214,7 +214,7 @@ function drawHorizontal() {
 					tx = Math.floor(texture.w * (floorX - cellX)) % (texture.w - 1);
 					ty = Math.floor(texture.h * (floorY - cellY)) % (texture.h - 1);
 					color = texture.pixels[tx + ty * texture.w]
-					color = [color[0], color[1], color[2]]
+					color = new RGB(color.r, color.g, color.b)
 					color = fogRGB(color, rowDistance)
 					if (stringRGB(color) == "rgb(255,0,255)") {
 						//transparency
@@ -257,7 +257,7 @@ function drawVertical(x, perpWallDist, side, tile, texX) {
 			var pixelIdx = Math.abs(i * texture.w + texX) % (texture.pixels.length)
 
 			var color = texture.pixels[pixelIdx]
-			color = [color[0], color[1], color[2]]
+			color = new RGB(color.r, color.g, color.b)
 			if (stringRGB(color) == "rgb(255,0,255)") {
 				//transparency
 			} else {
@@ -525,7 +525,7 @@ function encodeTexture() {
 		var r = sourceTex.data[j];
 		var g = sourceTex.data[j + 1];
 		var b = sourceTex.data[j + 2];
-		img.pixels.push([r, g, b]);
+		img.pixels.push(new RGB(r, g, b));
 	}
 	data.tiles[this.texIdx] = img;
 	loaded += 1;
