@@ -4,10 +4,12 @@ i got help from these sources:
 raycasting: https://lodev.org/cgtutor/raycasting.html
 rgb to hsl: https://gist.github.com/mjackson/5311256
 */
-var RUN = true
+//replace with actual file path later
 
-var windW = 320 //width of game in windowed mode
-var windH = 240 //height of game in windowed mode
+var RUN = true;
+
+var windW = 320; //width of game in windowed mode
+var windH = 240; //height of game in windowed mode
 var gameW = windW;
 var gameH = windH;
 var isFullscreen = false;
@@ -23,7 +25,7 @@ const assets = document.createElement("div")
 assets.style = "display: none; position: absolute"
 div.appendChild(assets);
 const menu = document.createElement("div");
-menu.innerHTML += '<button id="fullscreen", onclick="fullscreen()">⛶</button>'//for collapse use "⮌"
+menu.innerHTML += '<button id="fullscreen", onclick="fullscreen()">⛶</button>'
 menu.innerHTML += '<p id="debug" style="display:inline"> fps:0 </0>'
 div.appendChild(menu);
 
@@ -327,7 +329,7 @@ function drawObjects() {
 					// use a value for direction based on dir and number of direction frames
 					var dirs = (sprite["dirs"])? sprite["dirs"] : 1;
 					var dir = Math.round((dirs-1)*((spriteD-Math.PI/dirs)%6.282)/6.282)
-					var texX = Math.floor(tW * (stripe - originX) / spriteW) + (dir) * tW;
+					var texX = Math.floor(tW * (stripe - originX) / spriteW) + (dir * tW);
 					drawVertical(stripe, transformY, 0, tile, texX)
 				}
 			}
@@ -439,8 +441,9 @@ document.addEventListener('mousemove', (event) => {
 }, false);
 
 function moveCamera(DTime) {
-	var walkSpeed = .2;
-	var turnSpeed = .1;
+	var walkSpeed = 5*DTime/1000 || 0;
+	var turnSpeed = 4*DTime/1000 || 0;
+	//console.log(turnSpeed)
 	if (Keys[" "] > 50) {
 		MapIdx = (MapIdx + 1) % level.map.length
 		Keys[" "] = 0
@@ -451,7 +454,8 @@ function moveCamera(DTime) {
 	var strafe = (Keys["a"] > 0) - (Keys["d"] > 0);
 	//var fly = (Keys["f"] > 0) - (Keys["r"] > 0);
 	//rotate
-	Cam.d = (Cam.d + turn * turnSpeed) % (2 * Math.PI);
+	Cam.d += turn * turnSpeed
+	Cam.d = Cam.d % (2 * Math.PI);
 	if (Cam.d < 0) { Cam.d += 2 * Math.PI };
 	var oDirX = Cam.dirX;
 	Cam.dirX = Cam.dirX * Math.cos(turn * turnSpeed) - Cam.dirY * Math.sin(turn * turnSpeed);
@@ -499,6 +503,7 @@ canvas.addEventListener("click", async () => {
 //loading files
 var data;
 var loaded = 0;
+var Start;
 function progBar(x, max){
 	out="["
 	for(let i=1; i<max; i++){
@@ -537,8 +542,8 @@ function encodeTexture() {
 		RUN = true
 	}
 }
-async function getLevelFile(path = "./level/") {
-	//RUN = false
+async function getLevelFile(path = "level/") {
+	RUN = false
 	console.log("fetching level data")
 	const requestURL = path + "level.json"
 	const request = new Request(requestURL);
@@ -571,32 +576,36 @@ var lastRender = 0;
 var frame = 0;
 var bigD = 0;
 var fps = 30;
+
 function refreshDebug(DTime) {
 	var debug = document.getElementById("debug")
 	bigD += DTime;
 	if (frame % 8 == 0) {
-		var fps = Math.round((1000 / (bigD / 8)) * 10) / 10
+		var fps = Math.round((1000 / (DTime)) * 100) / 100
 		debug.innerHTML = " fps:" + fps + ", res:" + Cam.res + ", dir:" + Cam.d;
 		bigD = 0;
 
 	}
 };
+
 function MainLoop(timestamp) {
-	if (RUN) {
-		var DTime = timestamp - lastRender;
-		Map = level.map[MapIdx];
-		moveCamera(DTime);
-		ctx.fillStyle = "black";
-		ctx.fillRect(0, 0, gameW, gameH);
-		drawBkg();
-		Raycast();
-		refreshDebug(DTime);
-		if (fps > 30 && Cam.res > 1) { Cam.res -= 1 };
-		if (fps < 24) { Cam.res += 1 };
-		frame += 1;
-		lastRender = timestamp;
-		window.requestAnimationFrame(MainLoop);
+	if(frame==0){
+		frame+=1
+	}else{
+		if (RUN) {
+			var DTime = timestamp - lastRender;
+			Map = level.map[MapIdx];
+			moveCamera(DTime);
+			drawBkg();
+			Raycast();
+			refreshDebug(DTime);
+			if (fps > 36 && Cam.res > 1) { Cam.res -= 1 };
+			if (fps < 24) { Cam.res += 1 };
+			frame += 1;
+			lastRender = timestamp;
+		}
 	}
+	window.requestAnimationFrame(MainLoop);
 };
 getLevelFile().then(MainLoop);
 //drawHorizontal()

@@ -152,5 +152,6 @@
 				"color":[128,128,128]
 			}
 		}
-	]
+	],
+	"Start":{"function":{"arguments":"","body":"console.log('we did it!!!')"}}
 }
