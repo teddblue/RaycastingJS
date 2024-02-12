@@ -1,0 +1,4 @@
+in cmd, test by setting cd then:
+py -3 -m http.server
+veiw in browser at:
+localhost:8000

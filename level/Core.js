@@ -4,10 +4,9 @@ i got help from these sources:
 raycasting: https://lodev.org/cgtutor/raycasting.html
 rgb to hsl: https://gist.github.com/mjackson/5311256
 */
-//replace with actual file path later
+import {Start, Update} from "./Script.js"
 
 var RUN = true;
-
 var windW = 320; //width of game in windowed mode
 var windH = 240; //height of game in windowed mode
 var gameW = windW;
@@ -68,7 +67,7 @@ function stringRGB(color) {
 }
 
 //Map
-MapIdx = 0;
+var MapIdx = 0;
 var level = {
 	title: "starter world",
 	texW: 2,
@@ -212,7 +211,7 @@ function drawHorizontal() {
 				}
 				//draw ceiling
 				if (Map.floor[idx % Map.ceil.length] > 0) {
-					texture = level.tiles[Map.ceil[idx % Map.ceil.length]]
+					var texture = level.tiles[Map.ceil[idx % Map.ceil.length]]
 					tx = Math.floor(texture.w * (floorX - cellX)) % (texture.w - 1);
 					ty = Math.floor(texture.h * (floorY - cellY)) % (texture.h - 1);
 					color = texture.pixels[tx + ty * texture.w]
@@ -243,7 +242,7 @@ function drawVertical(x, perpWallDist, side, tile, texX) {
 		return null
 	}
 	tile -= 1
-	texture = level.tiles[tile]//level.blocks[tile].texture[0]]
+	var texture = level.tiles[tile]//level.blocks[tile].texture[0]]
 	var lineHeight = (h / perpWallDist);
 	var drawStart = (h * Cam.z - lineHeight / 2);
 	var drawEnd = (lineHeight / 2 + h * Cam.z);
@@ -342,7 +341,7 @@ function Raycast() {
 	h = Math.ceil(gameH / Cam.res)
 	w = Math.ceil(gameW / Cam.res)
 	drawHorizontal();
-	wallZ = [];
+	var wallZ = [];
 	for (let x = 0; x < w; x++) {
 		;
 		var camX = 2 * x / w - 1;
@@ -503,9 +502,8 @@ canvas.addEventListener("click", async () => {
 //loading files
 var data;
 var loaded = 0;
-var Start;
 function progBar(x, max){
-	out="["
+	var out="["
 	for(let i=1; i<max; i++){
 		if(i<x){
 			out+="="
@@ -525,7 +523,7 @@ function encodeTexture() {
 	img.h = this.height;
 	img.w = this.width;
 	ctx.drawImage(this, 0, 0);
-	sourceTex = ctx.getImageData(0, 0, img.w, img.h);
+	var sourceTex = ctx.getImageData(0, 0, img.w, img.h);
 	for (let j = 0; j < (sourceTex.data.length); j += 4) {
 		var r = sourceTex.data[j];
 		var g = sourceTex.data[j + 1];
@@ -596,6 +594,7 @@ function MainLoop(timestamp) {
 			var DTime = timestamp - lastRender;
 			Map = level.map[MapIdx];
 			moveCamera(DTime);
+			Update(DTime, Map);
 			drawBkg();
 			Raycast();
 			refreshDebug(DTime);
