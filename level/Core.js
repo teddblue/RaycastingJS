@@ -16,8 +16,9 @@ const div = document.getElementById("NicksGame");
 const canvas = document.createElement("canvas");
 canvas.width = gameW;
 canvas.height = gameH;
-canvas.style = "image-rendering: pixelated; image-rendering: crisp-edges"
+canvas.style = "image-rendering: pixelated"//; image-rendering: crisp-edges"
 const ctx = canvas.getContext("2d");
+ctx.imageSmoothingEnabled = false;
 ctx.fillRect(0, 0, gameW, gameH);
 div.appendChild(canvas);
 const assets = document.createElement("div")
@@ -67,8 +68,8 @@ function stringRGB(color) {
 }
 
 //Map
-var MapIdx = 0;
-var level = {
+export var MapIdx = 0;
+export var level = {
 	title: "starter world",
 	texW: 2,
 	texH: 2,
@@ -94,8 +95,8 @@ var level = {
 		}
 	]
 }
-var Map = level.map[MapIdx];
-function getTile(x, y) {
+export var Map = level.map[MapIdx];
+export function getTile(x, y) {
 	var idx = Math.floor(x) + (Math.floor(y) * Map.gridW)
 	var type = Map.grid[idx]
 	if (x < 0 || x > Map.gridW || y < 0 || y > Map.grid.length / Map.gridW) {
@@ -110,11 +111,12 @@ function getTile(x, y) {
 }
 
 //Camera
-var Cam = {
+export var Cam = {
 	x: 12,
 	y: 12,
 	z: .5,
-	d: 0,
+	d: 0, //camera direction
+	p: .5, //camera pitch
 	dirX: -1,
 	dirY: 0,
 	planeX: 0,
@@ -124,7 +126,8 @@ var Cam = {
 	fog: {
 		min: 5,
 		max: 10
-	}
+	},
+	overlay:11
 }
 var h = Math.ceil(gameH / Cam.res)
 var w = Math.ceil(gameW / Cam.res)
@@ -154,7 +157,7 @@ function drawBkg() {
 	ctx.fillStyle = "rgb(0,0,0)"
 	ctx.fillRect(0, 0, gameW, gameH)
 	var dx = Math.floor(windW * Cam.d);
-	var dy = 0 - (windH * Math.PI / 2);
+	var dy = Math.floor(windH * Cam.p - windH * 2);
 	var dw = Math.floor(windW * 2 * Math.PI);
 	var dh = Math.floor(windH * 2 * Math.PI);
 	ctx.drawImage(document.getElementById("tex_" + Map.skybox), dx, dy, dw, dh)
@@ -163,13 +166,14 @@ function drawBkg() {
 function drawHorizontal() {
 	h = Math.ceil(gameH / Cam.res)
 	w = Math.ceil(gameW / Cam.res)
-	for (let y = 0; y < h / 2; y++) {
+	for (let y = 0; y < h; y++) {
 		var rayDirX0 = Cam.dirX - Cam.planeX;
 		var rayDirY0 = Cam.dirY - Cam.planeY;
 		var rayDirX1 = Cam.dirX + Cam.planeX;
 		var rayDirY1 = Cam.dirY + Cam.planeY;
 
-		var p = y - h / 2;
+		var isFloor = y>h*Cam.p
+		var p = isFloor? h * Cam.p - y : y - h * Cam.p;
 		var posZ = Cam.z * h;
 		var rowDistance = posZ / p;
 
@@ -189,45 +193,48 @@ function drawHorizontal() {
 
 			//draw floor
 			if (idx > -1) {
-				if (Map.floor[idx % Map.floor.length] > 0) {
-					var texture = level.tiles[Map.floor[idx % Map.floor.length]]
-					var tx = Math.floor(texture.w * (floorX - cellX)) % (texture.w - 1);
-					var ty = Math.floor(texture.h * (floorY - cellY)) % (texture.h - 1);
-					var color = texture.pixels[tx + ty * texture.w]
-					color = [color[0], color[1], color[2]]
-					color = fogRGB(color, rowDistance)
-					if (stringRGB(color) == "rgb(255,0,255)") {
-						//transparency
-					} else {
-						color = stringRGB(color)
-						ctx.fillStyle = color;
-						ctx.fillRect(
-							Math.floor(x * Cam.res),
-							Math.ceil((h - y) * Cam.res - 1),
-							Math.floor(Cam.res),
-							Math.floor(Cam.res)
-						);
+				if(isFloor){
+					if (Map.floor[idx % Map.floor.length] > 0) {
+						var texture = level.tiles[Map.floor[idx % Map.floor.length]]
+						var tx = Math.floor(texture.w * (floorX - cellX)) % (texture.w - 1);
+						var ty = Math.floor(texture.h * (floorY - cellY)) % (texture.h - 1);
+						var color = texture.pixels[tx + ty * texture.w]
+						color = [color[0], color[1], color[2]]
+						color = fogRGB(color, rowDistance)
+						if (stringRGB(color) == "rgb(255,0,255)") {
+							//transparency
+						} else {
+							color = stringRGB(color)
+							ctx.fillStyle = color;
+							ctx.fillRect(
+								Math.floor(x * Cam.res),
+								Math.ceil((y) * Cam.res - 1),
+								Math.floor(Cam.res),
+								Math.floor(Cam.res)
+							);
+						}
 					}
-				}
-				//draw ceiling
-				if (Map.floor[idx % Map.ceil.length] > 0) {
-					var texture = level.tiles[Map.ceil[idx % Map.ceil.length]]
-					tx = Math.floor(texture.w * (floorX - cellX)) % (texture.w - 1);
-					ty = Math.floor(texture.h * (floorY - cellY)) % (texture.h - 1);
-					color = texture.pixels[tx + ty * texture.w]
-					color = [color[0], color[1], color[2]]
-					color = fogRGB(color, rowDistance)
-					if (stringRGB(color) == "rgb(255,0,255)") {
-						//transparency
-					} else {
-						color = stringRGB(color)
-						ctx.fillStyle = color;
-						ctx.fillRect(
-							Math.floor(x * Cam.res),
-							Math.ceil((y) * Cam.res - 1),
-							Math.floor(Cam.res),
-							Math.floor(Cam.res)
-						);
+				}else{
+					//draw ceiling
+					if (Map.floor[idx % Map.ceil.length] > 0) {
+						var texture = level.tiles[Map.ceil[idx % Map.ceil.length]]
+						var tx = Math.floor(texture.w * (floorX - cellX)) % (texture.w - 1);
+						var ty = Math.floor(texture.h * (floorY - cellY)) % (texture.h - 1);
+						var color = texture.pixels[tx + ty * texture.w]
+						color = [color[0], color[1], color[2]]
+						color = fogRGB(color, rowDistance)
+						if (stringRGB(color) == "rgb(255,0,255)") {
+							//transparency
+						} else {
+							color = stringRGB(color)
+							ctx.fillStyle = color;
+							ctx.fillRect(
+								Math.floor(x * Cam.res),
+								Math.ceil((y) * Cam.res - 1),
+								Math.floor(Cam.res),
+								Math.floor(Cam.res)
+							);
+						}
 					}
 				}
 			}
@@ -244,8 +251,8 @@ function drawVertical(x, perpWallDist, side, tile, texX) {
 	tile -= 1
 	var texture = level.tiles[tile]//level.blocks[tile].texture[0]]
 	var lineHeight = (h / perpWallDist);
-	var drawStart = (h * Cam.z - lineHeight / 2);
-	var drawEnd = (lineHeight / 2 + h * Cam.z);
+	var drawStart = (h * Cam.p - lineHeight / 2);
+	var drawEnd = (lineHeight / 2 + h * Cam.p);
 	var drawSize = drawEnd - drawStart
 	// draw vertical in sections by color
 	var segSize = (drawSize / texture.h)
@@ -299,9 +306,9 @@ function drawObjects() {
 			var spriteScreenX = Math.floor((w / 2) * (1 + transformX / transformY));
 
 			var spriteH = Math.abs(Math.floor(h / transformY))
-			var drawStartY = -1 * spriteH / 2 + h / 2;
+			var drawStartY = -1 * spriteH / 2 + h * Cam.p;
 			if (drawStartY < 0) { drawStartY = 0 }
-			var drawEndY = spriteH / 2 + h / 2;
+			var drawEndY = spriteH / 2 + h * Cam.p;
 			if (drawEndY >= h) { drawEndY = h - 1 }
 
 			var spriteW = Math.abs(Math.floor(h / transformY))
@@ -420,6 +427,12 @@ function Raycast() {
 	}
 	drawObjects();
 }
+function drawOvl(){
+	if(Cam.overlay>0){
+		var img = document.getElementById("tex_"+(Cam.overlay-1))
+		ctx.drawImage(img,0,0,gameW,gameH)
+	}
+}
 
 // Control
 var Keys = {}
@@ -442,6 +455,7 @@ document.addEventListener('mousemove', (event) => {
 function moveCamera(DTime) {
 	var walkSpeed = 5*DTime/1000 || 0;
 	var turnSpeed = 4*DTime/1000 || 0;
+	var pitchSpeed = 3*DTime/1000 || 0;
 	//console.log(turnSpeed)
 	if (Keys[" "] > 50) {
 		MapIdx = (MapIdx + 1) % level.map.length
@@ -449,13 +463,19 @@ function moveCamera(DTime) {
 	}
 	var walk = (Keys["w"] > 0 || Keys["ArrowUp"] > 0) - (Keys["s"] > 0 || Keys["ArrowDown"] > 0);
 	var turn = (Keys["q"] > 0 || Keys["ArrowLeft"] > 0) - (Keys["e"] > 0 || Keys["ArrowRight"] > 0);
-	if (document.pointerLockElement == canvas) { turn = Mouse.x / -20 }; //mouse controls
+	var pitch = 0;
+	if (document.pointerLockElement == canvas) {
+		turn = Mouse.x / -20
+		pitch = Mouse.y / -20
+	};
 	var strafe = (Keys["a"] > 0) - (Keys["d"] > 0);
 	//var fly = (Keys["f"] > 0) - (Keys["r"] > 0);
 	//rotate
 	Cam.d += turn * turnSpeed
 	Cam.d = Cam.d % (2 * Math.PI);
 	if (Cam.d < 0) { Cam.d += 2 * Math.PI };
+	Cam.p += pitch*pitchSpeed
+	Cam.p = Math.max(-0.0, Math.min(Cam.p, 1.0))
 	var oDirX = Cam.dirX;
 	Cam.dirX = Cam.dirX * Math.cos(turn * turnSpeed) - Cam.dirY * Math.sin(turn * turnSpeed);
 	Cam.dirY = oDirX * Math.sin(turn * turnSpeed) + Cam.dirY * Math.cos(turn * turnSpeed);
@@ -481,7 +501,7 @@ function moveCamera(DTime) {
 	Mouse.x = 0;
 	Mouse.y = 0;
 }
-function fullscreen() {
+window.fullscreen = function() {
 	if (canvas.webkitRequestFullScreen) {
 		canvas.webkitRequestFullScreen();
 	} else {
@@ -594,9 +614,10 @@ function MainLoop(timestamp) {
 			var DTime = timestamp - lastRender;
 			Map = level.map[MapIdx];
 			moveCamera(DTime);
-			Update(DTime, Map);
+			Update(DTime);
 			drawBkg();
 			Raycast();
+			drawOvl();
 			refreshDebug(DTime);
 			if (fps > 36 && Cam.res > 1) { Cam.res -= 1 };
 			if (fps < 24) { Cam.res += 1 };
