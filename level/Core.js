@@ -28,6 +28,8 @@ const menu = document.createElement("div");
 menu.innerHTML += '<button id="fullscreen", onclick="fullscreen()">⛶</button>'
 menu.innerHTML += '<p id="debug" style="display:inline"> fps:0 </0>'
 div.appendChild(menu);
+const AudioContext = window.AudioContext || window.webkitAudioContext;
+const aud = new AudioContext();
 
 var logData = false;
 
@@ -434,6 +436,17 @@ function drawOvl(){
 	}
 }
 
+//Audio
+var Sound = []
+var gainNode = aud.createGain()
+var panNode = new StereoPannerNode(aud, {pan: 0})
+export function playSound(soundID, gain, pan=0){
+	gainNode.gain.value = gain
+	panNode.pan.value = pan
+	
+	Sound[soundID].play();
+}
+
 // Control
 var Keys = {}
 var Mouse = { x: 0, y: 0, z: 0, b1: 0, b2: 0, b3: 0 }
@@ -552,7 +565,7 @@ function encodeTexture() {
 	}
 	data.tiles[this.texIdx] = img;
 	loaded += 1;
-	//console.log("\rloading textures: "+progBar(loaded,data.textures.length))
+	//console.log("loading textures: "+progBar(loaded,data.textures.length))
 	if (loaded == data.textures.length) {
 		level = data
 		console.log("load finished")
@@ -568,11 +581,21 @@ async function getLevelFile(path = "level/") {
 	const response = await fetch(request);
 	data = await response.json()
 	if (data == null) { return (null) }
+	
+	var list = data.sounds
+	Sound = []
+	console.log("loading sounds...")
+	for(let i = 0; i < list.length; i++){
+		Sound[i] = new Audio(path + "sounds/" + list[i])
+		Sound[i].id = "sound_" + i;
+		var track = aud.createMediaElementSource(Sound[i]);
+		track.connect(gainNode).connect(panNode).connect(aud.destination);
+		assets.appendChild(Sound[i])
+	}
 
-	path += "textures/"
-	var list = data.textures
+	list = data.textures
 	data.tiles = []
-	console.log("loading textures: "+progBar(0,list.length))
+	console.log("loading textures...")//: "+progBar(0,list.length))
 	loaded = 0
 	for (let i = 0; i < list.length; i++) {
 		data.tiles.push({})
@@ -582,11 +605,12 @@ async function getLevelFile(path = "level/") {
 		ctx.fillRect(0, 0, gameW, gameH)
 		var tex = new Image();
 		tex.onload = encodeTexture;
-		tex.src = path + list[i];
+		tex.src = path + "textures/" + list[i];
 		tex.id = "tex_" + i;
 		tex.texIdx = i;
 		assets.appendChild(tex);
 	}
+	
 }
 
 //gameloop
@@ -614,7 +638,7 @@ function MainLoop(timestamp) {
 			var DTime = timestamp - lastRender;
 			Map = level.map[MapIdx];
 			moveCamera(DTime);
-			Update(DTime);
+			Update(DTime, frame);
 			drawBkg();
 			Raycast();
 			drawOvl();

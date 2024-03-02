@@ -1,5 +1,8 @@
 {
 	"title": "starter world",
+	"sounds":[
+		"vine-boom.mp3"
+	],
 	"texW": 32,
 	"texH": 32,
 	"textures": [
@@ -153,6 +156,5 @@
 				"color":[128,128,128]
 			}
 		}
-	],
-	"Start":{"function":{"arguments":"","body":"console.log('we did it!!!')"}}
+	]
 }
